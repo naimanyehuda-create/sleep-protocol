@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sleep Protocol Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0F172A;
+            --surface: #1E293B;
+            --primary: #38BDF8;
+            --primary-dim: rgba(56, 189, 248, 0.15);
+            --alert: #EF4444;
+            --text-main: #F8FAFC;
+            --text-muted: #94A3B8;
+            --check-bg: #334155;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding-bottom: 90px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Navigation */
+        .nav {
+            position: fixed; bottom: 0; width: 100%;
+            background: var(--surface); display: flex; justify-content: space-around;
+            padding: 12px 0; border-top: 1px solid #334155;
+            z-index: 1000; box-shadow: 0 -4px 12px rgba(0,0,0,0.2);
+        }
+        .nav-item {
+            font-size: 0.75rem; font-weight: 500; cursor: pointer;
+            color: var(--text-muted); transition: color 0.2s;
+            text-align: center; display: flex; flex-direction: column; align-items: center;
+        }
+        .nav-item.active { color: var(--primary); }
+        .nav-icon { font-size: 1.2rem; margin-bottom: 3px; }
+
+        /* Pages */
+        .page { display: none; padding: 20px; animation: fadeIn 0.3s ease; }
+        .page.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Cards & UI Elements */
+        .card {
+            background: var(--surface); padding: 24px; border-radius: 28px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 20px;
+            border: 1px solid #334155;
+        }
+        h1 { margin-top: 0; font-size: 1.8rem; }
+        h3 { margin-top: 0; color: var(--primary); margin-bottom: 15px;}
+        
+        input[type="time"], input[type="text"], input[type="number"], select {
+            background: var(--bg); border: 1px solid #334155; color: var(--text-main);
+            padding: 12px; border-radius: 16px; width: 100%; margin-top: 5px;
+            font-size: 1rem; box-sizing: border-box;
+        }
+        
+        button {
+            background: var(--primary); color: #0F172A; border: none; padding: 16px;
+            border-radius: 20px; width: 100%; font-weight: 700; font-size: 1rem;
+            margin-top: 15px; cursor: pointer; transition: opacity 0.2s;
+        }
+        button.secondary { background: transparent; color: var(--primary); border: 2px solid var(--primary); }
+        button.danger { background: var(--alert); color: white; }
+        button.small { padding: 8px 12px; font-size: 0.9rem; margin-top: 5px; border-radius: 12px; width: auto; }
+        button:active { opacity: 0.8; }
+
+        /* Dashboard Banner */
+        .banner {
+            background: var(--primary-dim); border: 1px solid var(--primary);
+            padding: 20px; border-radius: 24px; margin-bottom: 20px;
+        }
+        .banner-title { color: var(--primary); font-size: 0.9rem; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+        .banner-task { font-size: 1.4rem; font-weight: 700; color: white; margin-bottom: 5px;}
+        .banner-time { font-size: 1rem; color: var(--text-muted); }
+
+        /* Timeline Checklist */
+        .timeline-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 12px; border-bottom: 1px solid #334155; transition: all 0.3s;
+            border-radius: 12px; margin-bottom: 4px;
+        }
+        .timeline-item:last-child { border-bottom: none; }
+        .timeline-content { display: flex; flex-direction: column; flex-grow: 1; margin-left: 15px; }
+        .timeline-time { color: var(--text-muted); font-size: 0.85rem; font-weight: 500; margin-bottom: 2px;}
+        .timeline-desc { color: var(--text-main); font-size: 1.05rem; }
+        .alert-text { color: var(--alert) !important; font-weight: bold; }
+        
+        .timeline-item.upcoming { background: var(--primary-dim); border-left: 4px solid var(--primary); padding-left: 10px; border-bottom: none; }
+        .timeline-item.past { opacity: 0.4; }
+        .timeline-item.completed .timeline-desc { text-decoration: line-through; color: var(--text-muted); }
+
+        /* Checkbox */
+        .checkbox-wrapper { position: relative; width: 26px; height: 26px; flex-shrink: 0; }
+        .checkbox-wrapper input { opacity: 0; width: 0; height: 0; position: absolute; }
+        .checkmark {
+            position: absolute; top: 0; left: 0; height: 26px; width: 26px;
+            background-color: var(--check-bg); border-radius: 8px; border: 2px solid #475569;
+            display: flex; align-items: center; justify-content: center; transition: 0.2s;
+        }
+        .checkbox-wrapper input:checked ~ .checkmark { background-color: var(--primary); border-color: var(--primary); }
+        .checkmark:after {
+            content: ""; display: none; width: 6px; height: 12px;
+            border: solid #0F172A; border-width: 0 3px 3px 0; transform: rotate(45deg);
+            margin-bottom: 2px;
+        }
+        .checkbox-wrapper input:checked ~ .checkmark:after { display: block; }
+
+        /* Switches */
+        .toggle-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 12px 0; border-bottom: 1px solid #334155;
+        }
+        .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #334155; transition: .4s; border-radius: 24px;
+        }
+        .slider:before {
+            position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px;
+            background-color: white; transition: .4s; border-radius: 50%;
+        }
+        input:checked + .slider { background-color: var(--primary); }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+        /* Posture Flip Card */
+        .flip-card { height: 280px; perspective: 1000px; cursor: pointer; margin-bottom: 15px;}
+        .flipper { position: relative; width: 100%; height: 100%; transition: transform 0.6s; transform-style: preserve-3d; }
+        .flip-card.flipped .flipper { transform: rotateY(180deg); }
+        .front, .back { 
+            position: absolute; width: 100%; height: 100%; 
+            backface-visibility: hidden; border-radius: 28px; 
+            padding: 24px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: flex-start;
+        }
+        .front { background: var(--surface); border: 2px solid var(--primary); }
+        .back { background: rgba(239, 68, 68, 0.1); border: 2px solid var(--alert); transform: rotateY(180deg); justify-content: center;}
+        .diagram { width: 100%; height: 90px; margin-bottom: 10px; background: var(--bg); border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+        
+        /* Pacer Circle */
+        .pacer-container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 60vh; }
+        .pacer-circle {
+            width: 160px; height: 160px; border-radius: 50%; background: var(--primary);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: #0F172A; font-weight: bold; transition: all 0.3s ease; box-shadow: 0 0 30px rgba(56, 189, 248, 0.3);
+        }
+        .pacer-step { font-size: 1.8rem; margin-bottom: 4px; }
+        .pacer-time { font-size: 1.5rem; opacity: 0.9;}
+        #pacer-instruction { margin-top: 50px; color: var(--text-muted); font-size: 1.1rem; text-align: center; height: 30px;}
+
+        /* Modals */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.95); z-index: 9999;
+            flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box;
+        }
+        .modal-box {
+            background: var(--surface); padding: 30px; border-radius: 28px; width: 100%; max-width: 400px;
+            border: 1px solid #334155; max-height: 80vh; overflow-y: auto; box-sizing: border-box;
+        }
+        .builder-step { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; background: var(--bg); padding: 10px; border-radius: 12px;}
+        
+        .protocol-section { margin-bottom: 20px; }
+        .protocol-section h4 { color: var(--text-main); margin: 0 0 5px 0; font-size: 1.05rem; }
+        .protocol-section p { color: var(--text-muted); margin: 0; font-size: 0.95rem; line-height: 1.5; }
+    </style>
+</head>
+<body>
+
+<!-- HOME TAB -->
+<div id="home" class="page active">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <div>
+            <h1>Welcome, Leiby</h1>
+            <div style="color: var(--text-muted); margin-bottom: 20px;" id="current-date"></div>
+        </div>
+        <div id="live-clock" style="font-size: 1.6rem; font-weight: 700; color: var(--primary); text-align: right; margin-top: 5px;">00:00:00</div>
+    </div>
+
+    <div class="banner">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="banner-title">Current Status</div>
+            <div class="banner-title" style="color: white;">Next In: <span id="countdown-timer" style="font-size: 1rem;">--:--:--</span></div>
+        </div>
+        <div class="banner-task" id="banner-task">Calculating...</div>
+        <div class="banner-time" id="banner-time">--</div>
+    </div>
+
+    <div class="card">
+        <h3>Schedule Settings</h3>
+        <label style="font-size: 0.9rem; color: var(--text-muted);">Wake-up Time:</label>
+        <input type="time" id="wakeTime" value="07:20" onchange="calculateSchedule()">
+        
+        <label style="font-size: 0.9rem; color: var(--text-muted); display: block; margin-top: 15px;">Tonight's Routine:</label>
+        <select id="scheduleMode" onchange="handleScheduleChange()">
+            <option value="free">Schedule A: Summer / Free Night</option>
+            <option value="class">Schedule B: Class Night</option>
+            <option value="add_new" style="color: var(--primary);">+ Add Custom Mode</option>
+        </select>
+    </div>
+
+    <div class="card">
+        <h3>Tonight's Protocol</h3>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: -10px; margin-bottom: 15px;">Check off items as you complete them.</p>
+        <div id="timeline-container"></div>
+    </div>
+</div>
+
+<!-- ALERTS & ALARMS TAB -->
+<div id="alerts" class="page">
+    <h1>Alerts & Alarms</h1>
+    <p style="color: var(--text-muted); margin-bottom: 20px;">Manage native curfews and device wake alarms.</p>
+
+    <div class="card">
+        <h3>Wake Alarm</h3>
+        <label style="font-size: 0.9rem; color: var(--text-muted);">Set device alarm time (Works in-app):</label>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <input type="time" id="alarmTime" value="07:20" style="flex-grow: 1;" onchange="updateAlarmSettings()">
+            <label class="switch" style="margin-top: 5px;">
+                <input type="checkbox" id="alarmToggle" onchange="updateAlarmSettings()">
+                <span class="slider"></span>
+            </label>
+        </div>
+        <button class="secondary" onclick="testAlarm()" style="margin-top: 15px; padding: 10px;">Test Sound</button>
+    </div>
+
+    <div class="card">
+        <h3>Curfew Notifications</h3>
+        <p style="font-size: 0.8rem; color: var(--text-muted);">Enable to receive Android push alerts when curfew milestones hit.</p>
+        <div class="toggle-row">
+            <span style="color: var(--text-main);">Vape/Fluid Cutoff</span>
+            <!-- NOW CALLS updateNotificationPreferences() -->
+            <label class="switch"><input type="checkbox" id="notifCurfew1" onchange="updateNotificationPreferences()"><span class="slider"></span></label>
+        </div>
+        <div class="toggle-row">
+            <span style="color: var(--text-main);">Analog Transition</span>
+            <label class="switch"><input type="checkbox" id="notifCurfew2" onchange="updateNotificationPreferences()"><span class="slider"></span></label>
+        </div>
+        <div class="toggle-row">
+            <span style="color: var(--text-main);">Digital Curfew</span>
+            <label class="switch"><input type="checkbox" id="notifCurfew3" onchange="updateNotificationPreferences()"><span class="slider"></span></label>
+        </div>
+    </div>
+</div>
+
+<!-- PACER TAB -->
+<div id="pacer" class="page">
+    <div style="text-align: center; margin-bottom: 20px;">
+        <h1>Military Pacer</h1>
+        <div style="color: var(--text-muted); font-size: 0.9rem;">Lights out. AirPods removed. Follow the ring.</div>
+    </div>
+    <div class="pacer-container">
+        <div class="pacer-circle" id="circle">
+            <div class="pacer-step" id="circle-step">READY</div>
+            <div class="pacer-time" id="circle-time">--</div>
+        </div>
+        <div id="pacer-instruction">Press start to begin.</div>
+        <button id="pacer-btn" onclick="togglePacer()" style="margin-top: 50px;">Start 4-8 Breathing</button>
+    </div>
+</div>
+
+<!-- POSTURE TAB -->
+<div id="posture" class="page">
+    <h1>Posture Guide</h1>
+    <p style="color: var(--text-muted); margin-bottom: 20px;">Tap cards to reveal avoidance warnings.</p>
+    
+    <div class="flip-card" onclick="this.classList.toggle('flipped')">
+        <div class="flipper">
+            <div class="front">
+                <h2 style="margin: 0 0 5px 0;">1. Supine (Back)</h2>
+                <div class="diagram">
+                    <svg viewBox="0 0 100 40" style="width:100%; height:100%; fill:none; stroke:var(--primary); stroke-width:3; stroke-linecap:round;">
+                        <line x1="10" y1="35" x2="90" y2="35" stroke="#334155" />
+                        <rect x="20" y="29" width="15" height="4" rx="2" stroke="none" fill="#334155" />
+                        <circle cx="27" cy="23" r="5" />
+                        <path d="M 32 28 L 70 28" />
+                        <path d="M 70 28 L 70 18 L 85 18" />
+                        <path d="M 35 28 L 45 22 L 55 28" />
+                    </svg>
+                </div>
+                <p style="margin: 0; color: var(--text-muted); font-size: 0.85rem; line-height: 1.4;"><strong>Pillow:</strong> Flat placement directly under the head/neck. Never under shoulders.<br><strong>Hands:</strong> Rest loosely at sides or folded gently on stomach.</p>
+            </div>
+            <div class="back">
+                <h2 style="margin: 0 0 10px 0; color: var(--alert);">Avoid</h2>
+                <p style="margin: 0; color: var(--text-muted); line-height: 1.5;">Do not sleep with your arms raised above your head. This compresses nerves and causes numbness.</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="flip-card" onclick="this.classList.toggle('flipped')">
+        <div class="flipper">
+            <div class="front">
+                <h2 style="margin: 0 0 5px 0;">2. Lateral (Side)</h2>
+                <div class="diagram">
+                    <svg viewBox="0 0 100 40" style="width:100%; height:100%; fill:none; stroke:var(--primary); stroke-width:3; stroke-linecap:round;">
+                        <line x1="10" y1="35" x2="90" y2="35" stroke="#334155" />
+                        <rect x="20" y="21" width="10" height="12" rx="2" stroke="none" fill="#334155" />
+                        <circle cx="25" cy="15" r="5" />
+                        <path d="M 30 20 C 45 20, 55 20, 65 28" />
+                        <path d="M 65 28 L 75 28" />
+                        <path d="M 32 20 L 40 30 L 50 30" />
+                    </svg>
+                </div>
+                <p style="margin: 0; color: var(--text-muted); font-size: 0.85rem; line-height: 1.4;"><strong>Pillow:</strong> Must fill the exact gap between ear and mattress to keep spine straight.<br><strong>Hands:</strong> Extended slightly forward, loosely folded.</p>
+            </div>
+            <div class="back">
+                <h2 style="margin: 0 0 10px 0; color: var(--alert);">Avoid</h2>
+                <p style="margin: 0; color: var(--text-muted); line-height: 1.5;">Do not jam your hand under the pillow (cuts circulation). Avoid curling into a tight fetal position.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- PROTOCOL TAB -->
+<div id="protocol" class="page">
+    <h1>Sleep Modifiers</h1>
+    <p style="color: var(--text-muted); margin-bottom: 20px;">Reference data from Advanced Protocol Guidelines.</p>
+    <div class="card">
+        <div class="protocol-section">
+            <h4>Military Shutdown Steps</h4>
+            <p><strong>Step 1:</strong> Facial & Shoulder Drop. Close your eyes, slacken your jaw, and drop your shoulders completely into the mattress.<br>
+            <strong>Step 5:</strong> Arm & Leg Shutdown. Let your arms go numb. Then your thighs, calves, and feet.</p>
+        </div>
+        <div class="protocol-section">
+            <h4>Optimal Temperature</h4>
+            <p>Keep your room between 65-68°F (18-20°C). A physical drop in your core body temperature is biologically required to initiate the sleep cycle.</p>
+        </div>
+        <div class="protocol-section">
+            <h4>The 20-Minute Rule</h4>
+            <p>If you complete the breathing method and are still awake after 20 minutes, leave the bed. Read a book in dim light until you feel tired, then return.</p>
+        </div>
+        <div class="protocol-section">
+            <h4>Audio Distraction</h4>
+            <p>If silence causes your brain to overthink, use a fan or white noise machine. If using AirPods for lectures, always use a 20-minute sleep timer and remove them before falling asleep to protect ear health.</p>
+        </div>
+        <div class="protocol-section" style="margin-bottom: 0;">
+            <h4>Stimulant Curfews</h4>
+            <p>Vaping introduces nicotine. Your absolute final vape must be at 9:30 PM (or immediately post-class) to give your heart rate 2 hours to normalize.</p>
+        </div>
+    </div>
+</div>
+
+<!-- MODALS -->
+<div id="builder-modal" class="modal-overlay">
+    <div class="modal-box">
+        <h2 style="margin-top: 0;">Add Custom Schedule</h2>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Create a new routine. Times are calculated in minutes *before* lights out.</p>
+        
+        <label style="font-size: 0.9rem;">Mode Name:</label>
+        <input type="text" id="customModeName" placeholder="e.g. Weekend Protocol" style="margin-bottom: 15px;">
+
+        <div id="builder-steps-container">
+            <div class="builder-step">
+                <input type="number" class="step-offset" value="120" placeholder="Mins" style="width: 80px;" min="0">
+                <input type="text" class="step-desc" value="Wind down begins" placeholder="Task description">
+            </div>
+            <div class="builder-step">
+                <input type="number" class="step-offset" value="0" placeholder="Mins" style="width: 80px;" min="0">
+                <input type="text" class="step-desc" value="Lights Out" placeholder="Task description">
+            </div>
+        </div>
+
+        <button class="secondary small" onclick="addBuilderStep()">+ Add Another Step</button>
+        
+        <div style="display: flex; gap: 10px; margin-top: 25px;">
+            <button class="secondary" onclick="closeBuilderModal()" style="margin-top: 0;">Cancel</button>
+            <button onclick="saveCustomMode()" style="margin-top: 0;">Save Routine</button>
+        </div>
+    </div>
+</div>
+
+<div id="alarm-modal" class="modal-overlay">
+    <div class="modal-box" style="text-align: center; border: 2px solid var(--alert); animation: pulseAlert 1s infinite;">
+        <h1 style="color: var(--alert); font-size: 2.5rem; margin-bottom: 10px;" id="alarm-display-time">07:20</h1>
+        <h3 style="color: white; margin-bottom: 30px;">WAKE UP ALARM</h3>
+        <button class="danger" onclick="stopAlarmSound()">DISMISS ALARM</button>
+    </div>
+</div>
+
+<!-- BOTTOM NAVIGATION -->
+<nav class="nav">
+    <div class="nav-item active" onclick="switchPage('home', this)">
+        <div class="nav-icon">⌂</div> Home
+    </div>
+    <div class="nav-item" onclick="switchPage('alerts', this)">
+        <div class="nav-icon">⏰</div> Alerts
+    </div>
+    <div class="nav-item" onclick="switchPage('pacer', this)">
+        <div class="nav-icon">◎</div> Pacer
+    </div>
+    <div class="nav-item" onclick="switchPage('posture', this)">
+        <div class="nav-icon">⚥</div> Posture
+    </div>
+    <div class="nav-item" onclick="switchPage('protocol', this)">
+        <div class="nav-icon">🕮</div> Info
+    </div>
+</nav>
+
+<script>
+    // --- GLOBAL DATA & STATE ---
+    const baseSchedules = {
+        free: [
+            { offset: 175, desc: "Environment Shift", isAlert: false },
+            { offset: 140, desc: "Movie Time", isAlert: false },
+            { offset: 110, desc: "Vape & Fluid Curfew", isAlert: true },
+            { offset: 50, desc: "Transition to Analog", isAlert: false },
+            { offset: 20, desc: "Digital Curfew", isAlert: false },
+            { offset: 0, desc: "Lights Out & Pacer", isAlert: false }
+        ],
+        class: [
+            { offset: 175, desc: "PC Shutdown & Final Vape", isAlert: false },
+            { offset: 110, desc: "Fluid Curfew", isAlert: true },
+            { offset: 80, desc: "Analog Decompression", isAlert: false },
+            { offset: 20, desc: "Digital Curfew", isAlert: false },
+            { offset: 0, desc: "Lights Out & Pacer", isAlert: false }
+        ]
+    };
+    
+    let customSchedules = {};
+    let activeTimelineEvents = [];
+    let previousSelectValue = "free";
+
+    // --- INIT & NAVIGATION ---
+    window.onload = () => {
+        const dateEn = new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).format(new Date());
+        const dateHe = new Intl.DateTimeFormat('he-IL-u-ca-hebrew', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date());
+        document.getElementById('current-date').innerHTML = `${dateEn}<br><span style="font-size: 0.95rem; color: var(--primary); margin-top: 4px; display: inline-block;">${dateHe}</span>`;
+        
+        loadCustomModes();
+
+        if(localStorage.getItem('wakeTime')) {
+            document.getElementById('wakeTime').value = localStorage.getItem('wakeTime');
+            document.getElementById('alarmTime').value = localStorage.getItem('wakeTime');
+        }
+        if(localStorage.getItem('scheduleMode')) {
+            let savedMode = localStorage.getItem('scheduleMode');
+            if(document.querySelector(`#scheduleMode option[value="${savedMode}"]`)) {
+                document.getElementById('scheduleMode').value = savedMode;
+                previousSelectValue = savedMode;
+            }
+        }
+        
+        calculateSchedule();
+        
+        setInterval(updateLiveDashboard, 1000);
+        updateLiveDashboard();
+    };
+
+    function switchPage(id, el) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        el.classList.add('active');
+    }
+
+    // --- NATIVE NOTIFICATION ENGINE ---
+    async function requestNotificationPermission() {
+        try {
+            if (window.Capacitor?.Plugins?.LocalNotifications) {
+                await window.Capacitor.Plugins.LocalNotifications.requestPermissions();
+            } else if ("Notification" in window) {
+                Notification.requestPermission();
+            }
+        } catch (e) {
+            console.error("Permission error:", e);
+        }
+    }
+
+    async function scheduleNativeNotifications() {
+        if (!window.Capacitor?.Plugins?.LocalNotifications) return;
+        const LocalNotifications = window.Capacitor.Plugins.LocalNotifications;
+
+        // Clear any old schedule
+        await LocalNotifications.cancel({ 
+            notifications: activeTimelineEvents.map((_, i) => ({ id: i + 1 })) 
+        });
+
+        let t1 = document.getElementById('notifCurfew1').checked;
+        let t2 = document.getElementById('notifCurfew2').checked;
+        let t3 = document.getElementById('notifCurfew3').checked;
+
+        let toSchedule = [];
+
+        activeTimelineEvents.forEach((ev, index) => {
+            if (ev.time.getTime() > Date.now()) {
+                let shouldNotify = false;
+                let desc = ev.desc.toLowerCase();
+
+                if (t1 && (desc.includes('vape') || desc.includes('fluid') || desc.includes('curfew'))) shouldNotify = true;
+                if (t2 && (desc.includes('analog') || desc.includes('decompression'))) shouldNotify = true;
+                if (t3 && desc.includes('digital')) shouldNotify = true;
+
+                if (shouldNotify) {
+                    toSchedule.push({
+                        title: "Sleep Protocol Pro",
+                        body: `Curfew Reached: ${ev.desc}`,
+                        id: index + 1, 
+                        schedule: { at: ev.time } 
+                    });
+                }
+            }
+        });
+
+        if (toSchedule.length > 0) {
+            await LocalNotifications.schedule({ notifications: toSchedule });
+        }
+    }
+
+    // Wrapper function called by the toggles
+    async function updateNotificationPreferences() {
+        await requestNotificationPermission();
+        await scheduleNativeNotifications();
+    }
+
+    // --- TIMELINE & SCHEDULE CALCULATION ---
+    function handleScheduleChange() {
+        const select = document.getElementById('scheduleMode');
+        if (select.value === "add_new") {
+            document.getElementById('builder-modal').style.display = 'flex';
+            select.value = previousSelectValue;
+        } else {
+            previousSelectValue = select.value;
+            calculateSchedule();
+        }
+    }
+
+    function calculateSchedule() {
+        const wakeInput = document.getElementById('wakeTime').value;
+        const mode = document.getElementById('scheduleMode').value;
+        
+        localStorage.setItem('wakeTime', wakeInput);
+        localStorage.setItem('scheduleMode', mode);
+        document.getElementById('alarmTime').value = wakeInput;
+
+        const [wakeH, wakeM] = wakeInput.split(':').map(Number);
+        
+        let now = new Date();
+        let wakeDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), wakeH, wakeM);
+        
+        if (now.getTime() > wakeDate.getTime()) {
+            wakeDate.setDate(wakeDate.getDate() + 1);
+        }
+        
+        let lightsOutDate = new Date(wakeDate.getTime() - (8 * 3600 * 1000));
+        let template = baseSchedules[mode] || customSchedules[mode] || baseSchedules['free'];
+        
+        activeTimelineEvents = [];
+        let html = '';
+
+        const checklistKey = `checklist_${now.toISOString().split('T')[0]}_${mode}`;
+        let savedChecks = JSON.parse(localStorage.getItem(checklistKey)) || {};
+
+        let sortedTemplate = [...template].sort((a, b) => b.offset - a.offset);
+
+        sortedTemplate.forEach((item, index) => {
+            let eventTime = new Date(lightsOutDate.getTime() - (item.offset * 60 * 1000));
+            activeTimelineEvents.push({ time: eventTime, desc: item.desc, id: index });
+
+            let h = eventTime.getHours();
+            let m = eventTime.getMinutes().toString().padStart(2, '0');
+            let ampm = h >= 12 ? 'PM' : 'AM';
+            let timeStr = `${h % 12 || 12}:${m} ${ampm}`;
+            
+            let alertClass = item.isAlert ? 'alert-text' : '';
+            let isChecked = savedChecks[index] ? 'checked' : '';
+            let completedClass = isChecked ? 'completed' : '';
+
+            html += `
+                <div class="timeline-item ${completedClass}" id="event-row-${index}" data-time="${eventTime.getTime()}">
+                    <label class="checkbox-wrapper">
+                        <input type="checkbox" ${isChecked} onchange="toggleChecklist(${index}, this, '${checklistKey}')">
+                        <div class="checkmark"></div>
+                    </label>
+                    <div class="timeline-content">
+                        <div class="timeline-time">${timeStr}</div>
+                        <div class="timeline-desc ${alertClass}">${item.desc}</div>
+                    </div>
+                </div>
+            `;
+        });
+
+        document.getElementById('timeline-container').innerHTML = html;
+        updateLiveDashboard();
+        
+        // Push the brand new schedule to the OS natively
+        scheduleNativeNotifications(); 
+    }
+
+    function toggleChecklist(index, checkbox, storageKey) {
+        let savedChecks = JSON.parse(localStorage.getItem(storageKey)) || {};
+        savedChecks[index] = checkbox.checked;
+        localStorage.setItem(storageKey, JSON.stringify(savedChecks));
+        
+        let row = document.getElementById(`event-row-${index}`);
+        if (checkbox.checked) row.classList.add('completed');
+        else row.classList.remove('completed');
+    }
+
+    function updateLiveDashboard() {
+        let nowD = new Date();
+        document.getElementById('live-clock').innerText = nowD.toLocaleTimeString('en-US', { hour12: true });
+
+        if (activeTimelineEvents.length === 0) return;
+        
+        let now = nowD.getTime();
+        let currentEvent = null;
+        let foundCurrent = false;
+
+        document.querySelectorAll('.timeline-item').forEach(el => {
+            el.classList.remove('upcoming', 'past');
+        });
+
+        for (let i = 0; i < activeTimelineEvents.length; i++) {
+            let ev = activeTimelineEvents[i];
+            let row = document.getElementById(`event-row-${ev.id}`);
+            
+            if (now > ev.time.getTime()) {
+                if (row) row.classList.add('past');
+            } else {
+                if (!foundCurrent) {
+                    currentEvent = ev;
+                    if (row) row.classList.add('upcoming');
+                    foundCurrent = true;
+                }
+            }
+        }
+
+        const bannerTask = document.getElementById('banner-task');
+        const bannerTime = document.getElementById('banner-time');
+        const countdownTimer = document.getElementById('countdown-timer');
+
+        if (currentEvent) {
+            let h = currentEvent.time.getHours();
+            let m = currentEvent.time.getMinutes().toString().padStart(2, '0');
+            let ampm = h >= 12 ? 'PM' : 'AM';
+            
+            bannerTask.innerText = currentEvent.desc;
+            bannerTime.innerText = `Scheduled for ${h % 12 || 12}:${m} ${ampm}`;
+
+            let diff = currentEvent.time.getTime() - now;
+            let diffH = Math.floor(diff / (1000 * 60 * 60));
+            let diffM = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            let diffS = Math.floor((diff % (1000 * 60)) / 1000);
+            
+            countdownTimer.innerText = `${diffH.toString().padStart(2, '0')}:${diffM.toString().padStart(2, '0')}:${diffS.toString().padStart(2, '0')}`;
+        } else {
+            bannerTask.innerText = "Protocol Complete";
+            bannerTime.innerText = "Time for sleep.";
+            countdownTimer.innerText = "00:00:00";
+        }
+    }
+
+    // --- CUSTOM MODE BUILDER ---
+    function loadCustomModes() {
+        let saved = localStorage.getItem('customModes');
+        if (saved) {
+            customSchedules = JSON.parse(saved);
+            const select = document.getElementById('scheduleMode');
+            
+            for (const [key, val] of Object.entries(customSchedules)) {
+                let opt = document.createElement('option');
+                opt.value = key;
+                opt.text = `Custom: ${val.name}`;
+                select.insertBefore(opt, select.querySelector('option[value="add_new"]'));
+            }
+        }
+    }
+
+    function addBuilderStep() {
+        const container = document.getElementById('builder-steps-container');
+        const stepHTML = `
+            <div class="builder-step">
+                <input type="number" class="step-offset" placeholder="Mins" style="width: 80px;" min="0">
+                <input type="text" class="step-desc" placeholder="Task description">
+            </div>
+        `;
+        container.insertAdjacentHTML('beforeend', stepHTML);
+    }
+
+    function closeBuilderModal() {
+        document.getElementById('builder-modal').style.display = 'none';
+        document.getElementById('scheduleMode').value = previousSelectValue;
+    }
+
+    function saveCustomMode() {
+        const nameInput = document.getElementById('customModeName').value.trim();
+        if(!nameInput) { alert("Please enter a name for your custom routine."); return; }
+
+        let newSteps = [];
+        document.querySelectorAll('.builder-step').forEach(step => {
+            let offset = parseInt(step.querySelector('.step-offset').value);
+            let desc = step.querySelector('.step-desc').value.trim();
+            if (!isNaN(offset) && desc) {
+                newSteps.push({ offset: offset, desc: desc, isAlert: false });
+            }
+        });
+
+        if (newSteps.length === 0) { alert("Add at least one valid step."); return; }
+
+        let modeId = 'custom_' + Date.now();
+        customSchedules[modeId] = newSteps;
+        customSchedules[modeId].name = nameInput;
+
+        localStorage.setItem('customModes', JSON.stringify(customSchedules));
+
+        const select = document.getElementById('scheduleMode');
+        let opt = document.createElement('option');
+        opt.value = modeId;
+        opt.text = `Custom: ${nameInput}`;
+        select.insertBefore(opt, select.querySelector('option[value="add_new"]'));
+
+        select.value = modeId;
+        document.getElementById('builder-modal').style.display = 'none';
+        handleScheduleChange();
+    }
+
+    // --- ALARM ENGINE ---
+    let audioCtx = null; let alarmOsc = null; let lfo = null; let gainNode = null;
+    function testAlarm() { fireAlarm(document.getElementById('alarmTime').value); }
+    function stopAlarmSound() {
+        if (alarmOsc) { alarmOsc.stop(); alarmOsc.disconnect(); }
+        if (lfo) { lfo.stop(); lfo.disconnect(); }
+        document.getElementById('alarm-modal').style.display = 'none';
+    }
+    function fireAlarm(timeDisplay) {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        alarmOsc = audioCtx.createOscillator(); lfo = audioCtx.createOscillator(); gainNode = audioCtx.createGain();
+        alarmOsc.type = 'square'; alarmOsc.frequency.setValueAtTime(880, audioCtx.currentTime); 
+        lfo.type = 'square'; lfo.frequency.value = 4; lfo.connect(gainNode.gain);
+        alarmOsc.connect(gainNode); gainNode.connect(audioCtx.destination);
+        alarmOsc.start(); lfo.start();
+        document.getElementById('alarm-display-time').innerText = timeDisplay;
+        document.getElementById('alarm-modal').style.display = 'flex';
+    }
+    
+    // --- PACER ENGINE ---
+    const phases = [
+        { name: "IN", dur: 4, inst: "Inhale quietly and slowly through nose.", scale: 1.6, color: "#38BDF8", txtColor: "#0F172A", border: "none" },
+        { name: "HOLD", dur: 2, inst: "Let the oxygen settle without straining.", scale: 1.6, color: "#F59E0B", txtColor: "#0F172A", border: "none" },
+        { name: "OUT", dur: 8, inst: "Exhale forcefully but slowly through mouth.", scale: 1, color: "#818CF8", txtColor: "#FFF", border: "none" },
+        { name: "REST", dur: 10, inst: "Clear your mind. Repeat 'don't think'.", scale: 0.8, color: "transparent", txtColor: "#38BDF8", border: "4px solid #38BDF8" }
+    ];
+    let pacerInterval; let isPacing = false; let timeRemaining = 0; let currentPhaseIdx = 0;
+
+    function togglePacer() {
+        const btn = document.getElementById('pacer-btn');
+        if (isPacing) {
+            clearInterval(pacerInterval); isPacing = false; btn.innerText = "Start 4-8 Breathing"; resetPacerUI();
+        } else {
+            isPacing = true; btn.innerText = "Stop Pacer"; currentPhaseIdx = 0; timeRemaining = phases[0].dur;
+            applyPhaseStyle(phases[0]); updateCountdownUI();
+            pacerInterval = setInterval(() => {
+                timeRemaining--;
+                if (timeRemaining <= 0) {
+                    currentPhaseIdx = (currentPhaseIdx + 1) % phases.length;
+                    timeRemaining = phases[currentPhaseIdx].dur;
+                    applyPhaseStyle(phases[currentPhaseIdx]);
+                }
+                updateCountdownUI();
+            }, 1000);
+        }
+    }
+    
+    function applyPhaseStyle(phase) {
+        const circle = document.getElementById('circle');
+        document.getElementById('circle-step').innerText = phase.name;
+        document.getElementById('pacer-instruction').innerText = phase.inst;
+        circle.style.transition = `transform ${phase.dur}s linear, background-color ${phase.dur}s linear, border 0.3s, color 0.3s`;
+        circle.style.transform = `scale(${phase.scale})`; circle.style.backgroundColor = phase.color;
+        circle.style.color = phase.txtColor; circle.style.border = phase.border;
+    }
+    
+    function updateCountdownUI() { document.getElementById('circle-time').innerText = timeRemaining + "s"; }
+    
+    function resetPacerUI() {
+        const circle = document.getElementById('circle');
+        document.getElementById('circle-step').innerText = "READY"; document.getElementById('circle-time').innerText = "--";
+        document.getElementById('pacer-instruction').innerText = "Press start to begin.";
+        circle.style.transition = "transform 0.5s ease, background-color 0.5s ease"; circle.style.transform = "scale(1)";
+        circle.style.backgroundColor = "var(--primary)"; circle.style.border = "none"; circle.style.color = "#0F172A";
+    }
+</script>
+</body>
+</html>
